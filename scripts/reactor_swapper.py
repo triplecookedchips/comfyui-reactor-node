@@ -31,17 +31,6 @@ import warnings
 import onnxruntime
 from pathlib import Path
 
-# Prevent insightface from attempting downloads by setting environment variables
-os.environ['INSIGHTFACE_MODEL_ZOO'] = '0'
-os.environ['INSIGHTFACE_HOME'] = str(Path(folder_paths.models_dir) / 'insightface')
-
-# Define providers for model initialization
-providers = []
-if torch.cuda.is_available():
-    providers = ['CUDAExecutionProvider']
-else:
-    providers = ['CPUExecutionProvider']
-
 np.warnings = warnings
 np.warnings.filterwarnings('ignore')
 
