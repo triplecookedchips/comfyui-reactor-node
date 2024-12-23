@@ -27,6 +27,21 @@ from scripts.r_faceboost import swapper, restorer
 
 import warnings
 
+# Add required imports
+import onnxruntime
+from pathlib import Path
+
+# Prevent insightface from attempting downloads by setting environment variables
+os.environ['INSIGHTFACE_MODEL_ZOO'] = '0'
+os.environ['INSIGHTFACE_HOME'] = str(Path(folder_paths.models_dir) / 'insightface')
+
+# Define providers for model initialization
+providers = []
+if torch.cuda.is_available():
+    providers = ['CUDAExecutionProvider']
+else:
+    providers = ['CPUExecutionProvider']
+
 np.warnings = warnings
 np.warnings.filterwarnings('ignore')
 
@@ -193,6 +208,12 @@ def get_face_single(img_data: np.ndarray, face, face_index=0, det_size=(640, 640
     if os.path.exists(buffalo_path):
         os.remove(buffalo_path)
 
+def get_face_single(img_data: np.ndarray, face, face_index=0, det_size=(640, 640), gender_source=0, gender_target=0, order="large-small"):
+    # Add this line at the start of the function
+    buffalo_path = os.path.join(insightface_models_path, "buffalo_l.zip")
+    if os.path.exists(buffalo_path):
+        os.remove(buffalo_path)
+    
     if gender_source != 0:
         if len(face) == 0 and det_size[0] > 320 and det_size[1] > 320:
             det_size_half = half_det_size(det_size)
