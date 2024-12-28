@@ -16,7 +16,16 @@ import onnx
 from onnx import numpy_helper
 from scripts.reactor_logger import logger
 
-
+def patched_download(sub_dir, name, force=False, root='~/.insightface'):
+    """No-op download function since files are pre-downloaded via Dockerfile"""
+    _root = os.path.expanduser(root)
+    dir_path = os.path.join(_root, sub_dir, name)
+    if not osp.exists(dir_path):
+        logger.warning(f"Expected pre-downloaded files not found at {dir_path}")
+    else:
+        logger.info(f"Using pre-downloaded files at {dir_path}")
+    return dir_path
+    
 def patched_get_model(self, **kwargs):
     session = PickableInferenceSession(self.onnx_file, **kwargs)
     inputs = session.get_inputs()
@@ -112,11 +121,15 @@ def pathced_retinaface_prepare(self, ctx_id, **kwargs):
 
 
 def patch_insightface(get_model, faceanalysis_init, faceanalysis_prepare, inswapper_init, retinaface_prepare):
+    # Existing patches
     insightface.model_zoo.model_zoo.ModelRouter.get_model = get_model
     insightface.app.FaceAnalysis.__init__ = faceanalysis_init
     insightface.app.FaceAnalysis.prepare = faceanalysis_prepare
     insightface.model_zoo.inswapper.INSwapper.__init__ = inswapper_init
     insightface.model_zoo.retinaface.RetinaFace.prepare = retinaface_prepare
+    # Add our download patch
+    insightface.utils.storage.download = patched_download
+    insightface.utils.ensure_available = patched_download
 
 
 original_functions = [ModelRouter.get_model, FaceAnalysis.__init__, FaceAnalysis.prepare, INSwapper.__init__, RetinaFace.prepare]
@@ -124,6 +137,10 @@ patched_functions = [patched_get_model, patched_faceanalysis_init, patched_facea
 
 
 def apply_patch(console_log_level):
+    # Always patch the downloads first, regardless of console_log_level
+    insightface.utils.storage.download = patched_download
+    insightface.utils.ensure_available = patched_download
+    
     if console_log_level == 0:
         patch_insightface(*patched_functions)
         logger.setLevel(logging.WARNING)
