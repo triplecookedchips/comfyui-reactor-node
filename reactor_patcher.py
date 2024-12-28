@@ -1,3 +1,4 @@
+import os
 import os.path as osp
 import glob
 import logging
@@ -15,6 +16,7 @@ import onnxruntime
 import onnx
 from onnx import numpy_helper
 from scripts.reactor_logger import logger
+
 
 def patched_download(sub_dir, name, force=False, root='~/.insightface'):
     """No-op download function since files are pre-downloaded via Dockerfile"""
@@ -137,9 +139,20 @@ patched_functions = [patched_get_model, patched_faceanalysis_init, patched_facea
 
 
 def apply_patch(console_log_level):
-    # Always patch the downloads first, regardless of console_log_level
-    insightface.utils.storage.download = patched_download
-    insightface.utils.ensure_available = patched_download
+    # Always patch the downloads first
+    try:
+        import insightface.utils.storage
+        insightface.utils.storage.download = patched_download
+        logger.info("Successfully patched InsightFace download function")
+    except Exception as e:
+        logger.error(f"Failed to patch InsightFace download: {e}")
+
+    try:
+        import insightface.utils
+        insightface.utils.ensure_available = patched_download
+        logger.info("Successfully patched InsightFace ensure_available function")
+    except Exception as e:
+        logger.error(f"Failed to patch InsightFace ensure_available: {e}")
     
     if console_log_level == 0:
         patch_insightface(*patched_functions)
